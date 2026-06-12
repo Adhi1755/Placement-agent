@@ -1,0 +1,60 @@
+Arjun Mehta
+arjunmehta.dev | github.com/arjunmehta-dev | arjun.mehta2025@gmail.com | +91-98765-43210
+LinkedIn: linkedin.com/in/arjunmehta-dev | Portfolio: arjunmehta.dev
+
+EDUCATION
+---------
+B.Tech in Computer Science & Engineering (Data Science Specialisation)
+VIT Vellore, Tamil Nadu
+CGPA: 8.74 / 10.0  |  Expected Graduation: May 2026
+
+TECHNICAL SKILLS
+----------------
+Languages        : Python (Advanced), JavaScript (Intermediate), SQL, Bash
+ML / AI          : PyTorch, Hugging Face Transformers, Scikit-learn, LangChain, LangGraph
+Data Engineering : Pandas, NumPy, Matplotlib, Seaborn, FAISS, ChromaDB
+Web / APIs       : FastAPI, Next.js, React, Tailwind CSS, REST APIs
+DevOps / Tools   : Docker (basic), Git, GitHub Actions (basic), Postman, VS Code
+Databases        : PostgreSQL, MongoDB
+
+PROJECTS
+--------
+1. RAG-Powered Internal Knowledge Assistant  |  Python, FastAPI, ChromaDB, LangChain, Docker
+   - Built a production-ready Retrieval-Augmented Generation (RAG) platform for a 200-document
+     internal knowledge base, reducing lookup time by ~60% during testing.
+   - Implemented a multi-stage pipeline: PDF ingestion → chunking → embedding (all-MiniLM-L6-v2)
+     → ChromaDB vector store → GPT-4 / Claude query answering with source citations.
+   - Containerised the full stack (FastAPI backend + ChromaDB) with Docker Compose.
+   - Exposed a clean REST API with async endpoints; integrated Postman test suite.
+   - GitHub: github.com/arjunmehta-dev/rag-knowledge-assistant
+
+2. SupplyPulse — Demand Forecasting ML Dashboard  |  Python, PyTorch, Scikit-learn, Next.js
+   - Trained an LSTM-based time-series model on 3 years of synthetic retail sales data achieving
+     RMSE of 4.2 units on the test set (baseline ARIMA RMSE: 7.8).
+   - Built an interactive Next.js dashboard to visualise forecasts, seasonality, and anomalies.
+   - Compared Prophet, XGBoost, and LSTM; wrote a detailed model comparison report.
+   - GitHub: github.com/arjunmehta-dev/supply-pulse
+
+3. HackBridge — Real-Time Hackathon Collaboration Platform  |  Next.js, React, FastAPI, PostgreSQL
+   - 3rd place finish at HackVIT 2024 (380+ participants).
+   - Designed and shipped a full-stack platform in 36 hours with team formation, real-time chat
+     (WebSocket), and project submission features.
+   - Handled WebSocket connection state management in React and FastAPI background tasks.
+   - GitHub: github.com/arjunmehta-dev/hackbridge
+
+CERTIFICATIONS & COURSES
+-------------------------
+- Deep Learning Specialisation — deeplearning.ai / Coursera (Andrew Ng)  [2024]
+- LangChain for LLM Application Development — deeplearning.ai  [2024]
+- AWS Cloud Practitioner Essentials — AWS Training  [2023]
+
+ACHIEVEMENTS
+------------
+- 3rd Place, HackVIT 2024 (380+ teams)
+- Ranked in top 8% on Kaggle (username: arjunmehta_ds)
+- Solved 280+ problems on LeetCode (Rating: 1582, targeting 1800+)
+
+POSITIONS OF RESPONSIBILITY
+----------------------------
+- Technical Lead, Data Science Club, VIT Vellore (2024–present)
+  Organised 4 workshops on RAG, LLMs, and PyTorch fundamentals (avg. 90 attendees).

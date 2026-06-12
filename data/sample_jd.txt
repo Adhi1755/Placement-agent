@@ -1,0 +1,66 @@
+Company: Zocket Technologies
+Location: Bangalore, India (Hybrid — 3 days onsite)
+Role: Machine Learning Engineer Intern
+Duration: 6 months (Jan 2025 – Jun 2025)
+Stipend: ₹40,000 – ₹60,000 / month (based on assessment)
+
+ABOUT ZOCKET
+------------
+Zocket is a fast-growing adtech SaaS company that uses AI to automate ad creative generation
+and campaign optimisation for SMBs across India and SEA. Our ML team owns the recommendation
+engine, creative quality scorer, and NLP pipelines that power 2M+ daily ad impressions.
+
+ROLE OVERVIEW
+-------------
+We are looking for a motivated ML Engineer Intern to join our core ML team. You will work
+alongside senior engineers on real production ML systems — not toy projects. Expect code reviews,
+sprint planning, and on-call exposure.
+
+WHAT YOU WILL DO
+----------------
+- Train, evaluate, and improve NLP models for ad copy classification, quality scoring, and
+  keyword extraction from product catalogues.
+- Build and maintain REST API endpoints (FastAPI or Flask) to serve ML model predictions at
+  low latency (<100ms p95).
+- Assist in integrating models into the production pipeline, including packaging models in
+  Docker containers and writing basic CI/CD pipeline configurations.
+- Write unit tests and integration tests for ML components.
+- Profile and debug model performance bottlenecks in staging environments.
+- Collaborate with the product team to translate business requirements into ML problem statements.
+
+REQUIRED SKILLS & QUALIFICATIONS
+---------------------------------
+- Currently pursuing B.Tech / M.Tech / M.Sc in Computer Science, Data Science, or related field.
+- Strong proficiency in Python; able to write clean, documented, production-quality code.
+- Hands-on experience with PyTorch or TensorFlow for model training and inference.
+- Demonstrated experience in NLP (text classification, embeddings, transformers) OR computer vision
+  (CNNs, object detection) — at least one project with real data.
+- Comfortable building REST APIs using FastAPI or Flask; understands async patterns.
+- Basic understanding of Docker — able to write a Dockerfile and run containers locally.
+- Strong Data Structures & Algorithms fundamentals — LeetCode 200+ easy/medium or equivalent.
+
+PREFERRED / GOOD TO HAVE
+--------------------------
+- Familiarity with MLOps concepts: experiment tracking (MLflow / W&B), model versioning,
+  CI/CD for ML pipelines (GitHub Actions / Jenkins).
+- Experience with TensorFlow Serving or ONNX for model export / serving.
+- Basic system design knowledge: able to discuss trade-offs in latency vs. throughput,
+  caching strategies, and load balancing for ML services.
+- Exposure to vector databases (FAISS, Pinecone, Weaviate) or RAG pipelines is a plus.
+- Prior internship experience at a product company is advantageous but not required.
+- Contributions to open-source ML projects or a strong public GitHub profile.
+
+INTERVIEW PROCESS
+-----------------
+1. Online Assessment: DSA (2 medium LeetCode problems) + ML quiz (30 min)
+2. Technical Round 1: ML concepts, Python coding, project deep-dive (60 min)
+3. Technical Round 2: System design (ML service design) + ML case study (60 min)
+4. HR Round: Culture fit, expectations alignment (30 min)
+
+HOW TO APPLY
+------------
+Send your resume and GitHub profile link to careers@zocket.in with subject line:
+[ML Intern Application] — <Your Name> — <College> — <Graduation Year>
+
+Zocket is an equal-opportunity employer. We celebrate diversity and are committed to creating
+an inclusive environment for all employees.
