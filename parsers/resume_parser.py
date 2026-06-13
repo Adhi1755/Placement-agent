@@ -1,62 +1,190 @@
-"""Resume parser — uses the Anthropic API to extract structured fields from plain-text resumes."""
+"""Resume parser — extracts structured data from PDF or plain text resumes."""
 
 import os
+import re
 import json
 import anthropic
 
+try:
+    import fitz  # PyMuPDF
+except ImportError:
+    fitz = None
 
-def parse_resume(resume_text: str) -> dict:
+
+# ── PDF extraction ───────────────────────────────────────────────────────────
+
+def extract_text_from_pdf(pdf_path: str) -> str:
+    """Extract text from every page of a PDF using PyMuPDF.
+
+    Pages are separated by a page-break marker.  Raises ValueError if the
+    PDF is empty or the extracted text is too short to be useful.
     """
-    Extract structured resume fields from plain text using Claude.
+    if fitz is None:
+        raise ImportError("PyMuPDF (fitz) is required for PDF parsing. Install with: pip install pymupdf")
 
-    Returns a dict with keys: name, skills, experience, projects, education, certifications.
-    On any parsing failure, returns a dict with empty lists for each field.
+    doc = fitz.open(pdf_path)
+    page_count = doc.page_count
+
+    if page_count == 0:
+        doc.close()
+        raise ValueError("PDF appears to be empty or unreadable")
+
+    pages_text = []
+    for page in doc:
+        pages_text.append(page.get_text("text"))
+    doc.close()
+
+    raw = "\n\n--- PAGE BREAK ---\n\n".join(pages_text)
+
+    # Collapse excessive whitespace (more than 2 consecutive newlines → 2)
+    raw = re.sub(r"\n{3,}", "\n\n", raw)
+
+    if len(raw.strip()) < 50:
+        raise ValueError("PDF appears to be empty or unreadable")
+
+    word_count = len(raw.split())
+    print(f"[ResumeParser] Extracted {word_count} words from {page_count} page(s)")
+    return raw.strip()
+
+
+# ── TXT extraction ───────────────────────────────────────────────────────────
+
+def extract_text_from_txt(txt_path: str) -> str:
+    """Read a plain-text resume file. Raises ValueError if empty."""
+    with open(txt_path, "r", encoding="utf-8") as f:
+        content = f.read().strip()
+
+    if not content:
+        raise ValueError("Resume text file is empty")
+
+    return content
+
+
+# ── LLM-based structured parsing ────────────────────────────────────────────
+
+_RESUME_SCHEMA = """\
+{
+  "name": string,
+  "email": string or null,
+  "phone": string or null,
+  "github": string or null,
+  "portfolio": string or null,
+  "cgpa": string or null,
+  "university": string or null,
+  "degree": string or null,
+  "graduation_year": string or null,
+  "technical_skills": [list of strings],
+  "soft_skills": [list of strings],
+  "projects": [
+    {
+      "name": string,
+      "tech_stack": [list of strings],
+      "description": string,
+      "achievement": string or null
+    }
+  ],
+  "experience": [
+    {
+      "company": string,
+      "role": string,
+      "duration": string,
+      "highlights": [list of strings]
+    }
+  ],
+  "certifications": [list of strings],
+  "achievements": [list of strings],
+  "languages_known": [list of strings]
+}"""
+
+_EMPTY_RESULT = {
+    "name": None,
+    "email": None,
+    "phone": None,
+    "github": None,
+    "portfolio": None,
+    "cgpa": None,
+    "university": None,
+    "degree": None,
+    "graduation_year": None,
+    "technical_skills": [],
+    "soft_skills": [],
+    "projects": [],
+    "experience": [],
+    "certifications": [],
+    "achievements": [],
+    "languages_known": [],
+}
+
+
+def parse_resume_text(resume_text: str) -> dict:
+    """Send resume text to Claude and return a structured dict.
+
+    On JSON parse failure the raw response is printed for debugging and a
+    default dict with empty lists / null strings is returned instead.
     """
-    print("[ResumeParser] Extracting structured data from resume text...")
-
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
     system_prompt = (
-        "You are a resume parsing assistant. "
-        "Extract structured information from the resume text provided. "
-        "Return ONLY valid JSON with these exact keys: "
-        "name (string), skills (array of strings), experience (array of objects with keys: title, company, duration, description), "
-        "projects (array of objects with keys: name, description, technologies), "
-        "education (array of objects with keys: degree, institution, year, gpa), "
-        "certifications (array of strings). "
-        "No markdown. No preamble. Pure JSON only."
+        "You are a resume parser. Extract structured information from the resume text. "
+        "Return ONLY valid JSON with exactly these fields:\n"
+        f"{_RESUME_SCHEMA}\n"
+        "No markdown fences. No preamble. Pure JSON only."
     )
-
-    empty_result = {
-        "name": "",
-        "skills": [],
-        "experience": [],
-        "projects": [],
-        "education": [],
-        "certifications": [],
-    }
 
     try:
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=2048,
+            max_tokens=2000,
             system=system_prompt,
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"Parse this resume:\n\n{resume_text}",
-                }
-            ],
+            messages=[{"role": "user", "content": f"Parse this resume:\n\n{resume_text}"}],
         )
         raw = message.content[0].text.strip()
         parsed = json.loads(raw)
-        print("[ResumeParser] Successfully parsed resume.")
+
+        # Validate critical list fields
+        if not isinstance(parsed.get("technical_skills"), list):
+            parsed["technical_skills"] = []
+        if not isinstance(parsed.get("projects"), list):
+            parsed["projects"] = []
+
+        skills_count = len(parsed["technical_skills"])
+        projects_count = len(parsed["projects"])
+        print(f"[ResumeParser] Parsed successfully — {skills_count} skills, {projects_count} projects found")
         return parsed
+
     except json.JSONDecodeError as e:
-        print(f"[ResumeParser] ERROR — JSON decode failed: {e}")
-        empty_result["_error"] = f"JSON decode error: {e}"
-        return empty_result
+        print(f"[ResumeParser] JSON parse failure: {e}")
+        print(f"[ResumeParser] Raw response:\n{raw}")
+        return dict(_EMPTY_RESULT)
+
     except Exception as e:
-        print(f"[ResumeParser] ERROR — API call failed: {e}")
-        empty_result["_error"] = str(e)
-        return empty_result
+        print(f"[ResumeParser] API error: {e}")
+        return dict(_EMPTY_RESULT)
+
+
+# ── Main entry point ────────────────────────────────────────────────────────
+
+def parse_resume(source: str) -> tuple[str, dict]:
+    """Parse a resume from a PDF path, TXT path, or raw text string.
+
+    Returns ``(raw_text, structured_dict)``.
+    """
+    source_stripped = source.strip()
+
+    if source_stripped.lower().endswith(".pdf"):
+        print("[ResumeParser] Source type detected: pdf")
+        raw_text = extract_text_from_pdf(source_stripped)
+    elif source_stripped.lower().endswith(".txt"):
+        print("[ResumeParser] Source type detected: txt")
+        raw_text = extract_text_from_txt(source_stripped)
+    elif len(source_stripped) > 200 and "." not in source_stripped.split()[-1]:
+        # Long text without a file extension → treat as raw resume text
+        print("[ResumeParser] Source type detected: raw_text")
+        raw_text = source_stripped
+    else:
+        # Fallback: try treating as raw text
+        print("[ResumeParser] Source type detected: raw_text")
+        raw_text = source_stripped
+
+    structured = parse_resume_text(raw_text)
+    return raw_text, structured

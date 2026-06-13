@@ -9,6 +9,7 @@ from agents.recruiter import recruiter
 from agents.advocate import advocate
 from agents.skill_graph import skill_graph
 from agents.interviewer import interviewer
+from agents.parser_agent import parser_agent_node
 
 
 def build_graph():
@@ -17,6 +18,7 @@ def build_graph():
 
     # Register all nodes
     graph.add_node("orchestrator", orchestrator)
+    graph.add_node("parser_agent", parser_agent_node)
     graph.add_node("resume_analyst", resume_analyst)
     graph.add_node("recruiter", recruiter)
     graph.add_node("advocate", advocate)
@@ -31,6 +33,7 @@ def build_graph():
         "orchestrator",
         route_from_orchestrator,
         {
+            "parser_agent":   "parser_agent",
             "resume_analyst": "resume_analyst",
             "recruiter":      "recruiter",
             "advocate":       "advocate",
@@ -39,6 +42,9 @@ def build_graph():
             "done":           END,
         },
     )
+
+    # After parser_agent, loop back to orchestrator
+    graph.add_edge("parser_agent", "orchestrator")
 
     # After resume_analyst, loop back to orchestrator
     graph.add_edge("resume_analyst", "orchestrator")

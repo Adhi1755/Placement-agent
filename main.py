@@ -2,6 +2,8 @@
 
 import os
 import sys
+import json
+import argparse
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -21,28 +23,41 @@ if not api_key or api_key == "your-key-here":
 from core.graph import build_graph  # noqa: E402 — import after env is loaded
 
 
-def read_file(path: Path) -> str:
-    """Read and return the contents of a file, exiting on failure."""
-    try:
-        return path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        print(f"[ERROR] Could not find required file: {path}")
-        sys.exit(1)
+def build_cli() -> argparse.Namespace:
+    """Build and parse CLI arguments."""
+    parser = argparse.ArgumentParser(
+        description="Placement Preparation Agent — Career Readiness Pipeline",
+    )
+    parser.add_argument(
+        "--resume",
+        default="data/sample_resume.pdf",
+        help="Path to PDF, path to TXT, or raw resume text (default: data/sample_resume.pdf)",
+    )
+    parser.add_argument(
+        "--jd",
+        default="data/sample_jd.txt",
+        help="Path to TXT, URL, or raw JD text (default: data/sample_jd.txt)",
+    )
+    parser.add_argument(
+        "--output",
+        default=None,
+        help="Optional path to save the full JSON result",
+    )
+    return parser.parse_args()
 
 
 def main():
-    base = Path(__file__).parent
-
-    resume_text = read_file(base / "data" / "sample_resume.txt")
-    jd_text = read_file(base / "data" / "sample_jd.txt")
+    args = build_cli()
 
     graph = build_graph()
 
     initial_state = {
-        "resume_text": resume_text,
-        "job_description": jd_text,
+        "resume_text": args.resume,        # could be path OR raw text
+        "job_description": args.jd,        # could be path, URL, or raw text
+        "resume_source": args.resume,
+        "jd_source": args.jd,
         "skill_rubric": {},
-        "resume_structured": {},
+        "resume_structured": {},           # empty triggers parser_agent first
         "jd_structured": {},
         "gap_list": [],
         "readiness_score": 0.0,
@@ -57,39 +72,87 @@ def main():
     final_state = graph.invoke(initial_state)
 
     # ── Print report ─────────────────────────────────────────────────────────
-    print("\n" + "=" * 40)
-    print("=== Career Readiness Report ===")
-    print("=" * 40)
+    print("\n" + "=" * 60)
+    print("          CAREER READINESS REPORT")
+    print("=" * 60)
 
+    # ── Candidate info from resume_structured ────────────────────────────────
+    resume_s = final_state.get("resume_structured", {})
+    jd_s = final_state.get("jd_structured", {})
+
+    candidate_name = resume_s.get("name", "Unknown")
+    role_title = jd_s.get("role_title", "Unknown Role")
+    print(f"\nCandidate : {candidate_name}")
+    print(f"Role      : {role_title}")
+
+    # ── Readiness score ──────────────────────────────────────────────────────
     score = final_state.get("readiness_score", 0.0)
-    print(f"Readiness Score: {score * 100:.0f}%\n")
+    print(f"\nReadiness Score: {score * 100:.0f}%")
 
+    # ── Gap list ─────────────────────────────────────────────────────────────
     gap_list = final_state.get("gap_list", [])
-    print("Gap List:")
+    print(f"\nGap List ({len(gap_list)} items):")
     if gap_list:
         for i, gap in enumerate(gap_list, 1):
             print(f"  {i}. {gap}")
     else:
         print("  (none identified)")
 
-    structured = final_state.get("resume_structured", {})
-    matched = structured.get("matched_skills", [])
+    # ── Matched / strength / weakness from resume_analyst ────────────────────
+    matched = resume_s.get("matched_skills", [])
     print(f"\nMatched Skills:\n  {', '.join(matched) if matched else '(none)'}")
 
-    strength = structured.get("strength_summary", "")
-    weakness = structured.get("weakness_summary", "")
+    strength = resume_s.get("strength_summary", "")
+    weakness = resume_s.get("weakness_summary", "")
     if strength:
         print(f"\nStrength: {strength}")
     if weakness:
         print(f"Weakness: {weakness}")
 
+    # ── Interview topics from JD ─────────────────────────────────────────────
+    topics = jd_s.get("interview_likely_topics", [])
+    if topics:
+        print(f"\nInterview Likely Topics ({len(topics)}):")
+        for t in topics:
+            print(f"  • {t}")
+
+    # ── ATS keyword analysis ─────────────────────────────────────────────────
+    ats_keywords = jd_s.get("keywords_for_ats", [])
+    candidate_skills = [s.lower() for s in resume_s.get("technical_skills", [])]
+    if ats_keywords:
+        matched_ats = [kw for kw in ats_keywords if kw.lower() in candidate_skills]
+        missing_ats = [kw for kw in ats_keywords if kw.lower() not in candidate_skills]
+        print(f"\nATS Keywords — Matched: {len(matched_ats)}, Missing: {len(missing_ats)}")
+        if matched_ats:
+            print(f"  ✅ Matched : {', '.join(matched_ats)}")
+        if missing_ats:
+            print(f"  ❌ Missing : {', '.join(missing_ats)}")
+
+    # ── Errors ───────────────────────────────────────────────────────────────
     errors = final_state.get("errors", [])
     if errors:
         print("\n[Errors encountered]")
         for err in errors:
             print(f"  - {err}")
 
-    print("=" * 40 + "\n")
+    print("\n" + "=" * 60 + "\n")
+
+    # ── Save JSON output if requested ────────────────────────────────────────
+    if args.output:
+        out_path = Path(args.output)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Convert to JSON-serialisable form (filter out non-serialisable types)
+        serialisable = {}
+        for k, v in final_state.items():
+            try:
+                json.dumps(v)
+                serialisable[k] = v
+            except (TypeError, ValueError):
+                serialisable[k] = str(v)
+
+        out_path.write_text(json.dumps(serialisable, indent=2, ensure_ascii=False), encoding="utf-8")
+        print(f"[main] Full result saved to {out_path}")
 
 
 if __name__ == "__main__":

@@ -22,13 +22,18 @@ def route_from_orchestrator(state: PlacementState) -> str:
     """
     Routing function for the conditional edge leaving the orchestrator node.
 
-    Today's routing logic (Week 1):
+    Routing logic:
+    - resume_structured is empty dict → run parser_agent first
     - gap_list is empty → run resume_analyst
     - debate_log is empty → done (skip adversarial agents for now)
     - otherwise → done
     """
+    resume_structured = state.get("resume_structured", {})
     gap_list = state.get("gap_list", [])
     debate_log = state.get("debate_log", [])
+
+    if not resume_structured:
+        return "parser_agent"
 
     if not gap_list:
         return "resume_analyst"

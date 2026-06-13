@@ -28,6 +28,8 @@ class SprintTask(TypedDict):
 class PlacementState(TypedDict):
     resume_text: str
     job_description: str
+    resume_source: str
+    jd_source: str
     skill_rubric: dict
     resume_structured: dict
     jd_structured: dict
