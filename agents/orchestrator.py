@@ -22,23 +22,40 @@ def route_from_orchestrator(state: PlacementState) -> str:
     """
     Routing function for the conditional edge leaving the orchestrator node.
 
-    Routing logic:
-    - resume_structured is empty dict → run parser_agent first
-    - gap_list is empty → run resume_analyst
-    - debate_log is empty → done (skip adversarial agents for now)
-    - otherwise → done
+    Drives the full analysis pipeline:
+
+        parser_agent → resume_analyst → recruiter → advocate → skill_graph → done
+
+    Routing is driven by ``current_phase`` (the phase the *last* agent set), not
+    by whether an agent produced any output. That keeps the pipeline moving even
+    when a stage legitimately emits nothing (e.g. no recruiter challenges) or
+    when an LLM call fails — otherwise the graph could loop on that stage forever.
+
+    (The interviewer is interactive and runs via the API, not this graph.)
     """
-    resume_structured = state.get("resume_structured", {})
-    gap_list = state.get("gap_list", [])
-    debate_log = state.get("debate_log", [])
+    phase = state.get("current_phase", "start")
 
-    if not resume_structured:
-        return "parser_agent"
+    # Each phase maps to the next node to run. Missing/unknown phases fall through
+    # to the resume_structured check below (handles a fresh "start" state) or done.
+    next_for_phase = {
+        "parsing_done": "resume_analyst",
+        "analysis_done": "recruiter",
+        "recruiter_done": "advocate",
+        "advocate_done": "skill_graph",
+        "skill_graph_done": "judge",
+        "judge_done": "resume_writer",
+        "rewrite_done": "done",
+    }
 
-    if not gap_list:
-        return "resume_analyst"
-
-    if not debate_log:
+    # Any failure phase ends the run rather than retrying the failed stage.
+    if phase.endswith("_failed"):
         return "done"
+
+    if phase in next_for_phase:
+        return next_for_phase[phase]
+
+    # Fresh state (phase "start") or resume not parsed yet → parse first.
+    if not state.get("resume_structured", {}):
+        return "parser_agent"
 
     return "done"

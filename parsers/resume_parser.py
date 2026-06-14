@@ -1,9 +1,8 @@
 """Resume parser — extracts structured data from PDF or plain text resumes."""
 
-import os
 import re
-import json
-import anthropic
+
+from core.llm import call_json
 
 try:
     import fitz  # PyMuPDF
@@ -117,13 +116,10 @@ _EMPTY_RESULT = {
 
 
 def parse_resume_text(resume_text: str) -> dict:
-    """Send resume text to Claude and return a structured dict.
+    """Send resume text to Gemini and return a structured dict.
 
-    On JSON parse failure the raw response is printed for debugging and a
-    default dict with empty lists / null strings is returned instead.
+    On any failure a default dict with empty lists / null strings is returned.
     """
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-
     system_prompt = (
         "You are a resume parser. Extract structured information from the resume text. "
         "Return ONLY valid JSON with exactly these fields:\n"
@@ -131,35 +127,27 @@ def parse_resume_text(resume_text: str) -> dict:
         "No markdown fences. No preamble. Pure JSON only."
     )
 
-    try:
-        message = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=2000,
-            system=system_prompt,
-            messages=[{"role": "user", "content": f"Parse this resume:\n\n{resume_text}"}],
-        )
-        raw = message.content[0].text.strip()
-        parsed = json.loads(raw)
+    parsed = call_json(
+        system_prompt,
+        f"Parse this resume:\n\n{resume_text}",
+        max_tokens=2000,
+        default=None,
+    )
 
-        # Validate critical list fields
-        if not isinstance(parsed.get("technical_skills"), list):
-            parsed["technical_skills"] = []
-        if not isinstance(parsed.get("projects"), list):
-            parsed["projects"] = []
-
-        skills_count = len(parsed["technical_skills"])
-        projects_count = len(parsed["projects"])
-        print(f"[ResumeParser] Parsed successfully — {skills_count} skills, {projects_count} projects found")
-        return parsed
-
-    except json.JSONDecodeError as e:
-        print(f"[ResumeParser] JSON parse failure: {e}")
-        print(f"[ResumeParser] Raw response:\n{raw}")
+    if not isinstance(parsed, dict):
+        print("[ResumeParser] Parsing failed — returning empty result")
         return dict(_EMPTY_RESULT)
 
-    except Exception as e:
-        print(f"[ResumeParser] API error: {e}")
-        return dict(_EMPTY_RESULT)
+    # Validate critical list fields
+    if not isinstance(parsed.get("technical_skills"), list):
+        parsed["technical_skills"] = []
+    if not isinstance(parsed.get("projects"), list):
+        parsed["projects"] = []
+
+    skills_count = len(parsed["technical_skills"])
+    projects_count = len(parsed["projects"])
+    print(f"[ResumeParser] Parsed successfully — {skills_count} skills, {projects_count} projects found")
+    return parsed
 
 
 # ── Main entry point ────────────────────────────────────────────────────────

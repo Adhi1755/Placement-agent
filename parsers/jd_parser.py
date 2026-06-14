@@ -1,10 +1,9 @@
 """JD parser — extracts structured requirements from job description text or URL."""
 
-import os
 import re
-import json
-import anthropic
 import urllib.request
+
+from core.llm import call_json
 
 
 # ── URL fetching ─────────────────────────────────────────────────────────────
@@ -63,13 +62,10 @@ _EMPTY_JD = {
 
 
 def parse_jd_text(jd_text: str) -> dict:
-    """Send JD text to Claude and return a structured dict.
+    """Send JD text to Gemini and return a structured dict.
 
-    On JSON parse failure the raw response is printed for debugging and a
-    default dict with empty lists is returned.
+    On any failure a default dict with empty lists is returned.
     """
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-
     system_prompt = (
         "You are a job description analyst. Extract structured requirements. "
         "Return ONLY valid JSON with exactly these fields:\n"
@@ -77,34 +73,26 @@ def parse_jd_text(jd_text: str) -> dict:
         "No markdown. No preamble. Pure JSON only."
     )
 
-    try:
-        message = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1500,
-            system=system_prompt,
-            messages=[{"role": "user", "content": f"Parse this job description:\n\n{jd_text}"}],
-        )
-        raw = message.content[0].text.strip()
-        parsed = json.loads(raw)
+    parsed = call_json(
+        system_prompt,
+        f"Parse this job description:\n\n{jd_text}",
+        max_tokens=1500,
+        default=None,
+    )
 
-        # Validate critical list field
-        if not isinstance(parsed.get("required_skills"), list):
-            parsed["required_skills"] = []
-
-        role = parsed.get("role_title", "?")
-        req_count = len(parsed["required_skills"])
-        topic_count = len(parsed.get("interview_likely_topics", []))
-        print(f"[JDParser] Parsed — role: {role}, {req_count} required skills, {topic_count} interview topics")
-        return parsed
-
-    except json.JSONDecodeError as e:
-        print(f"[JDParser] JSON parse failure: {e}")
-        print(f"[JDParser] Raw response:\n{raw}")
+    if not isinstance(parsed, dict):
+        print("[JDParser] Parsing failed — returning empty result")
         return dict(_EMPTY_JD)
 
-    except Exception as e:
-        print(f"[JDParser] API error: {e}")
-        return dict(_EMPTY_JD)
+    # Validate critical list field
+    if not isinstance(parsed.get("required_skills"), list):
+        parsed["required_skills"] = []
+
+    role = parsed.get("role_title", "?")
+    req_count = len(parsed["required_skills"])
+    topic_count = len(parsed.get("interview_likely_topics", []))
+    print(f"[JDParser] Parsed — role: {role}, {req_count} required skills, {topic_count} interview topics")
+    return parsed
 
 
 # ── Main entry point ────────────────────────────────────────────────────────

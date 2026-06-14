@@ -8,6 +8,7 @@ class DebateEntry(TypedDict):
     agent: str
     argument: str
     target: str
+    strength: float  # 0.0–1.0, how strong this argument is (drives the card strength bar)
 
 
 class InterviewRound(TypedDict):
@@ -33,9 +34,13 @@ class PlacementState(TypedDict):
     skill_rubric: dict
     resume_structured: dict
     jd_structured: dict
+    analysis: dict
+    dimensions: dict          # {technical, resume_quality, communication, domain_knowledge, cultural_fit}
     gap_list: List[str]
     readiness_score: float
-    debate_log: List[DebateEntry]
+    debate_log: Annotated[List[DebateEntry], operator.add]
+    verdict: dict             # judge output: who wins what, contested, final_readiness, summary
+    resume_rewrite: dict      # {rewritten_text, ats_before, ats_after, changes}
     skill_dag: dict
     sprint_plan: List[SprintTask]
     interview_history: List[InterviewRound]

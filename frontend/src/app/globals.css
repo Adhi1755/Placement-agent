@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+/*
+  Placement Agent — "The Verdict" (Editorial Tribunal) · Navy Court palette
+  Cream paper stock, near-black ink, a single committed navy seal, two counsel inks.
+  Depth from warm/cool ink + ruled hairlines — NOT shadows, glass, glow, or gradients.
+  Tokens are exposed as Tailwind utilities (bg-paper, text-ink-2, border-rule, text-seal…).
+*/
+
+@theme {
+  /* Stock */
+  --color-paper: #f1f0ea;
+  --color-surface: #f8f7f1;
+  --color-sunken: #e6e4da;
+
+  /* Ink — near-black, hue-shifted (never pure black) */
+  --color-ink: #1a1a18;
+  --color-ink-2: #4d4d49;
+  --color-ink-3: #7e7e78;
+
+  /* Rules — subtle editorial hairlines */
+  --color-rule: #d8d6cc;
+  --color-rule-strong: #c1beb1;
+
+  /* Committed accent — the navy verdict seal (the ONE brand color) */
+  --color-seal: #1e3a6e;
+  --color-seal-deep: #16294f;
+
+  /* The two counsel — warm advances (prosecution), cool recedes (defense) */
+  --color-recruiter: #8e3a22; /* warm oxblood ink */
+  --color-advocate: #2e6b5e; /* cool teal-green ink */
+
+  /* Functional — tuned to the palette */
+  --color-contested: #8a5a12; /* ochre */
+  --color-affirmed: #3c6238; /* muted green */
+
+  --font-display: var(--font-display), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
+}
+
+body {
+  background-color: var(--color-paper);
+  /* faint printed-stock grain — no gradients, no constellation */
+  background-image: radial-gradient(rgba(33, 27, 20, 0.025) 0.5px, transparent 0.5px);
+  background-size: 4px 4px;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+}
+
+.nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Keyboard focus — seal ring on paper */
+*:focus-visible {
+  outline: 2px solid var(--color-seal);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Editorial rule helper */
+.rule-t { border-top: 1px solid var(--color-rule); }
+.rule-b { border-bottom: 1px solid var(--color-rule); }
+
+/* Drop cap — editorial lead paragraph (ch03 typographic personality) */
+.dropcap::first-letter {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 3.1em;
+  line-height: 0.68;
+  float: left;
+  margin: 0.06em 0.09em 0 0;
+  color: var(--color-seal);
+}
+
+/* Leader dots — table-of-contents / docket device */
+.leader {
+  flex: 1 1 auto;
+  margin: 0 0.6rem;
+  border-bottom: 1px dotted var(--color-rule-strong);
+  transform: translateY(-0.3rem);
+}
+
+/* Vertical running head (left-margin furniture on wide screens) */
+.runninghead {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  letter-spacing: 0.28em;
+}
+
+/* The fingerprint: a letterpress "VERDICT" stamp */
+.stamp {
+  display: inline-block;
+  border: 2.5px solid var(--color-seal);
+  color: var(--color-seal);
+  padding: 0.25rem 0.75rem;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  border-radius: 3px;
+  transform: rotate(-6deg);
+  /* distressed edge */
+  box-shadow: inset 0 0 0 1px rgba(123, 45, 38, 0.25);
+  opacity: 0.92;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

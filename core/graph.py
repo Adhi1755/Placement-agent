@@ -10,6 +10,8 @@ from agents.advocate import advocate
 from agents.skill_graph import skill_graph
 from agents.interviewer import interviewer
 from agents.parser_agent import parser_agent_node
+from agents.judge import judge
+from agents.resume_writer import resume_writer
 
 
 def build_graph():
@@ -23,6 +25,8 @@ def build_graph():
     graph.add_node("recruiter", recruiter)
     graph.add_node("advocate", advocate)
     graph.add_node("skill_graph", skill_graph)
+    graph.add_node("judge", judge)
+    graph.add_node("resume_writer", resume_writer)
     graph.add_node("interviewer", interviewer)
 
     # Entry point
@@ -38,15 +42,20 @@ def build_graph():
             "recruiter":      "recruiter",
             "advocate":       "advocate",
             "skill_graph":    "skill_graph",
+            "judge":          "judge",
+            "resume_writer":  "resume_writer",
             "interviewer":    "interviewer",
             "done":           END,
         },
     )
 
-    # After parser_agent, loop back to orchestrator
+    # Every worker node loops back to the orchestrator, which decides the next step.
     graph.add_edge("parser_agent", "orchestrator")
-
-    # After resume_analyst, loop back to orchestrator
     graph.add_edge("resume_analyst", "orchestrator")
+    graph.add_edge("recruiter", "orchestrator")
+    graph.add_edge("advocate", "orchestrator")
+    graph.add_edge("skill_graph", "orchestrator")
+    graph.add_edge("judge", "orchestrator")
+    graph.add_edge("resume_writer", "orchestrator")
 
     return graph.compile()

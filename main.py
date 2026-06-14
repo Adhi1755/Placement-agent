@@ -11,12 +11,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ── API key guard ────────────────────────────────────────────────────────────
-api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-if not api_key or api_key == "your-key-here":
+api_key = os.environ.get("GOOGLE_API_KEY", "")
+if not api_key or api_key.startswith("your-"):
     print(
-        "\n[ERROR] ANTHROPIC_API_KEY is missing or still set to the placeholder value.\n"
-        "Please open placement-agent/.env and replace 'your-key-here' with your real key.\n"
-        "Get one at: https://console.anthropic.com/\n"
+        "\n[ERROR] GOOGLE_API_KEY is missing or still set to the placeholder value.\n"
+        "Please open placement-agent/.env and replace it with your real Gemini key.\n"
+        "Get one (free) at: https://aistudio.google.com/app/apikey\n"
     )
     sys.exit(1)
 
@@ -59,6 +59,7 @@ def main():
         "skill_rubric": {},
         "resume_structured": {},           # empty triggers parser_agent first
         "jd_structured": {},
+        "analysis": {},
         "gap_list": [],
         "readiness_score": 0.0,
         "debate_log": [],
@@ -99,15 +100,31 @@ def main():
         print("  (none identified)")
 
     # ── Matched / strength / weakness from resume_analyst ────────────────────
-    matched = resume_s.get("matched_skills", [])
+    analysis = final_state.get("analysis", {})
+    matched = analysis.get("matched_skills", [])
     print(f"\nMatched Skills:\n  {', '.join(matched) if matched else '(none)'}")
 
-    strength = resume_s.get("strength_summary", "")
-    weakness = resume_s.get("weakness_summary", "")
+    strength = analysis.get("strength_summary", "")
+    weakness = analysis.get("weakness_summary", "")
     if strength:
         print(f"\nStrength: {strength}")
     if weakness:
         print(f"Weakness: {weakness}")
+
+    # ── Debate log (recruiter vs advocate) ───────────────────────────────────
+    debate = final_state.get("debate_log", [])
+    if debate:
+        print(f"\nDebate ({len(debate)} entries):")
+        for d in debate:
+            print(f"  [{d.get('agent')}] ({d.get('target')}) {d.get('argument')}")
+
+    # ── Sprint plan from skill_graph ─────────────────────────────────────────
+    sprint = final_state.get("sprint_plan", [])
+    if sprint:
+        print(f"\nLearning Sprint Plan ({len(sprint)} tasks):")
+        for t in sprint:
+            print(f"  Week {t.get('week')}: {t.get('skill')} "
+                  f"(~{t.get('estimated_hours')}h) — {t.get('resource')}")
 
     # ── Interview topics from JD ─────────────────────────────────────────────
     topics = jd_s.get("interview_likely_topics", [])
@@ -118,10 +135,15 @@ def main():
 
     # ── ATS keyword analysis ─────────────────────────────────────────────────
     ats_keywords = jd_s.get("keywords_for_ats", [])
-    candidate_skills = [s.lower() for s in resume_s.get("technical_skills", [])]
+    # Substring match against all resume skill text (handles multi-word keywords).
+    haystack = " ".join(
+        resume_s.get("technical_skills", [])
+        + resume_s.get("soft_skills", [])
+        + [t for p in resume_s.get("projects", []) for t in p.get("tech_stack", [])]
+    ).lower()
     if ats_keywords:
-        matched_ats = [kw for kw in ats_keywords if kw.lower() in candidate_skills]
-        missing_ats = [kw for kw in ats_keywords if kw.lower() not in candidate_skills]
+        matched_ats = [kw for kw in ats_keywords if kw.lower() in haystack]
+        missing_ats = [kw for kw in ats_keywords if kw.lower() not in haystack]
         print(f"\nATS Keywords — Matched: {len(matched_ats)}, Missing: {len(missing_ats)}")
         if matched_ats:
             print(f"  ✅ Matched : {', '.join(matched_ats)}")
